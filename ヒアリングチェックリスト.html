@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>参加デバイス等ご状況ヒアリング</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue","Segoe UI",sans-serif;background:#F5F7FA;min-height:100vh;padding:32px 16px}
+  .container{max-width:760px;margin:0 auto}
+  h1{font-size:22px;font-weight:600;color:#1A1A2E;margin-bottom:6px;display:flex;align-items:center;gap:12px}
+  .subtitle{font-size:14px;color:#666;margin-bottom:20px}
+  .prog-row{display:flex;align-items:center;gap:10px;margin-bottom:20px}
+  .prog-track{flex:1;height:6px;background:#E0E4EF;border-radius:3px;overflow:hidden}
+  .prog-fill{height:100%;background:#1565C0;border-radius:3px;transition:width 0.3s}
+  .prog-txt{font-size:13px;color:#666;white-space:nowrap;min-width:40px;text-align:right}
+  .q-card{background:#fff;border:1px solid #E0E4EF;border-radius:12px;margin-bottom:12px;overflow:hidden;transition:border-color 0.15s,box-shadow 0.15s}
+  .q-card.done{border-color:#1565C0;border-width:1.5px;box-shadow:0 2px 8px rgba(21,101,192,0.10)}
+  .q-head{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid #F0F2F8;transition:background 0.15s}
+  .q-head.done-head{background:#EEF4FC;border-bottom-color:#D8E8F8}
+  .q-badge{width:32px;height:32px;min-width:32px;border-radius:50%;background:#1565C0;color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600}
+  .q-text{font-size:15px;font-weight:600;color:#1A1A2E;line-height:1.4;flex:1}
+  .q-answered{margin-left:8px;font-size:12px;color:#1565C0;background:#D8E8F8;padding:4px 12px;border-radius:20px;white-space:nowrap;font-weight:500}
+  .q-opts{display:flex;gap:8px;padding:12px 16px;flex-wrap:wrap}
+  .opt-btn{display:flex;align-items:center;gap:9px;padding:10px 18px;border-radius:8px;border:1.5px solid #D0D5E8;background:#fff;font-size:14px;color:#333;cursor:pointer;transition:all 0.12s;line-height:1.4;text-align:left;font-family:inherit}
+  .opt-btn:hover{border-color:#1565C0;background:#F0F5FF}
+  .opt-btn.sel{border-color:#1565C0;background:#EEF4FC;color:#0D47A1;font-weight:600}
+  .opt-icon{width:20px;height:20px;min-width:20px;border-radius:4px;border:1.5px solid #C0C8DC;background:#fff;display:flex;align-items:center;justify-content:center;transition:all 0.12s}
+  .opt-btn.sel .opt-icon{background:#1565C0;border-color:#1565C0}
+  .check-svg{display:none}
+  .opt-btn.sel .check-svg{display:block}
+  .footer{display:flex;justify-content:space-between;align-items:center;margin-top:8px}
+  .reset-btn{font-size:13px;color:#888;background:transparent;border:1px solid #D0D5E8;border-radius:8px;padding:7px 16px;cursor:pointer;font-family:inherit;transition:all 0.12s}
+  .reset-btn:hover{background:#F5F5F5;color:#444}
+  .complete-msg{font-size:13px;color:#1565C0;font-weight:500;opacity:0;transition:opacity 0.3s}
+  .complete-msg.show{opacity:1}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" style="min-width:24px"><rect x="3" y="3" width="18" height="18" rx="4" fill="#1565C0" opacity="0.12"/><path d="M7 12.5l3.5 3.5 6.5-7" stroke="#1565C0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    参加デバイス等ご状況ヒアリング
+  </h1>
+  <p class="subtitle">顧客の回答に合わせて選択してください</p>
+
+  <div class="prog-row">
+    <div class="prog-track"><div class="prog-fill" id="pf" style="width:0%"></div></div>
+    <span class="prog-txt" id="pt">0 / 6</span>
+  </div>
+
+  <div id="cards"></div>
+
+  <div class="footer">
+    <button class="reset-btn" onclick="resetAll()">リセット</button>
+    <span class="complete-msg" id="cmsg">すべての回答が完了しました</span>
+  </div>
+</div>
+
+<script>
+const qs = [
+  {id:1, text:"SBI証券でのパスキー設定のご経験", opts:["ある（操作が分かりづらかった箇所あり）","ない"]},
+  {id:2, text:"普段のSBI証券のログイン方法", opts:["サイト（Google検索等）","アプリ"]},
+  {id:3, text:"本日Teamsに参加されている端末", opts:["PC（Windows / Mac）","スマートフォン（iPhone / Android）"]},
+  {id:4, text:"設定されたい端末", opts:["PC（Windows / Mac）","スマートフォン（iPhone / Android）"]},
+  {id:5, text:"設定されたい端末にロックがかかっているか", opts:["画面ロック設定済み","設定していない"]},
+  {id:6, text:"SBI証券のログインID・パスワード・取引パスワードが分かる", opts:["分かる","分からない"]}
+];
+
+const st = {};
+
+function checkSVG() {
+  return `<svg class="check-svg" width="12" height="12" viewBox="0 0 12 12" fill="none">
+    <polyline points="2,6.5 5,9.5 10,3" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>`;
+}
+
+function render() {
+  const c = document.getElementById('cards');
+  c.innerHTML = '';
+  let done = 0;
+  qs.forEach(q => {
+    const ans = st[q.id];
+    const isDone = ans !== undefined;
+    if (isDone) done++;
+    const d = document.createElement('div');
+    d.className = 'q-card' + (isDone ? ' done' : '');
+    d.innerHTML = `
+      <div class="q-head${isDone ? ' done-head' : ''}">
+        <div class="q-badge">${q.id}</div>
+        <div class="q-text">${q.text}</div>
+        ${isDone ? `<div class="q-answered">${q.opts[ans]}</div>` : ''}
+      </div>
+      <div class="q-opts">
+        ${q.opts.map((o, i) => `
+          <button class="opt-btn${ans === i ? ' sel' : ''}" onclick="sel(${q.id},${i})">
+            <div class="opt-icon">${checkSVG()}</div>${o}
+          </button>`).join('')}
+      </div>`;
+    c.appendChild(d);
+  });
+
+  const pct = Math.round(done / 6 * 100);
+  document.getElementById('pf').style.width = pct + '%';
+  document.getElementById('pt').textContent = done + ' / 6';
+  const msg = document.getElementById('cmsg');
+  done === 6 ? msg.classList.add('show') : msg.classList.remove('show');
+}
+
+function sel(id, idx) {
+  st[id] = st[id] === idx ? undefined : idx;
+  if (st[id] === undefined) delete st[id];
+  render();
+}
+
+function resetAll() {
+  Object.keys(st).forEach(k => delete st[k]);
+  render();
+}
+
+render();
+</script>
+</body>
+</html>
